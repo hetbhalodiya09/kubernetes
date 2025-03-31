@@ -1,0 +1,29 @@
+groups:
+- name: scaling-alerts
+  rules:
+  - alert: HighCPUUsage
+    expr: avg(rate(container_cpu_usage_seconds_total{container="app"}[5m]) * 100 > 80
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High CPU usage detected"
+      description: "CPU usage is {{ $value }}% for pod {{ $labels.pod }}"
+
+  - alert: ScalingMismatch
+    expr: abs(kube_deployment_status_replicas{deployment="sample-app"} - scaling_prediction) > 1
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Scaling mismatch detected"
+      description: "Actual replicas ({{ $value }}) differ from ML prediction by more than 1"
+
+  - alert: ModelInferenceFailure
+    expr: up{job="scaling-predictor"} == 0
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "ML predictor is down"
+      description: "Scaling predictor service has been unavailable for 2 minutes"
