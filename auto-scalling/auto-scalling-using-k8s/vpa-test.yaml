@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpa-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-test
+  template:
+    metadata:
+      labels:
+        app: vpa-test
+    spec:
+      containers:
+        - name: vpa-test
+          image: vish/stress
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+          command: ["stress"]
+          args: ["--cpu", "1", "--timeout", "300s"]
+        

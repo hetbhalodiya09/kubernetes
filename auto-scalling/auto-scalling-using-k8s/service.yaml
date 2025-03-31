@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: auto-scalling-service
+spec:
+  selector:
+    app: auto-scalling-app
+  ports:
+    - protocol: TCP
+      port: 8081  # External port that Ingress forwards to
+      targetPort: 8081  # Port your app is running on inside the pod
+  type: ClusterIP  # Ingress requires ClusterIP service

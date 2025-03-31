@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: traffic-generator
+spec:
+  containers:
+    - name: wrk
+      image: williamyeh/wrk
+      command: ["/bin/sh", "-c"]
+      args:
+        - while true; do curl http://traffic-app.default.svc.cluster.local; sleep 10; done
