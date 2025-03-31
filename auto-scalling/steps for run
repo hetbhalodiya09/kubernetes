@@ -1,0 +1,60 @@
+minikube addons enable metrics-server
+
+docker build -t sample-app:latest ./app
+docker build -t scaling-predictor:latest ./ml-predictor
+
+minikube image load sample-app:latest
+minikube image load scaling-predictor:latest
+
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
+
+kubectl apply -f https://github.com/kubernetes-sigs/custom-metrics-apiserver/releases/latest/download/custom-metrics-apiservice.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/custom-metrics-apiserver/releases/latest/download/custom-metrics-resource-reader-cluster-role.yaml
+
+kubectl create namespace autoscale-system
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus-adapter prometheus-community/prometheus-adapter \
+  --namespace autoscale-system \
+  --set prometheus.url=http://prometheus.autoscale-system.svc.cluster.local \
+  --set prometheus.port=9090
+
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.68.0/example/prometheus-operator-crd/monitoring.coreos.com_prometheuses.yaml
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.68.0/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.68.0/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
+
+kubectl apply -f k8s/rbac.yaml -n autoscale-system
+kubectl apply -f k8s/prometheus-config.yaml -n autoscale-system
+kubectl apply -f k8s/prometheus.yaml -n autoscale-system
+kubectl apply -f k8s/grafana.yaml -n autoscale-system
+kubectl apply -f k8s/deployment.yaml -n autoscale-system
+kubectl apply -f k8s/service.yaml -n autoscale-system
+kubectl apply -f k8s/metrics-adaptor.yaml -n autoscale-system
+kubectl apply -f k8s/hpa.yaml -n autoscale-system
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  --namespace autoscale-system \
+  --create-namespace \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName="standard" \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage="10Gi"
+
+  # Check all pods are running
+kubectl get pods -n autoscale-system -w
+
+# Check services
+kubectl get svc -n autoscale-system
+
+# Check HPA status
+kubectl get hpa -n autoscale-system -w
+
+kubectl get pods -n autoscale-system -w
+
+# Forward ports for local accessss
+kubectl port-forward svc/sample-app 8000:80 -n autoscale-system &
+kubectl port-forward svc/grafana 3000:3000 -n autoscale-system &
+kubectl port-forward svc/prometheus 9090:9090 -n autoscale-system &
+
+# Or expose via Minikube
+minikube service sample-app -n autoscale-system
+minikube service grafana -n autoscale-system
