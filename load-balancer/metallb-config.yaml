@@ -1,0 +1,20 @@
+# metallb-config.yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  namespace: metallb-system
+  name: lb-pool
+spec:
+  addresses:
+    - 172.19.255.200-172.19.255.250
+
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  namespace: metallb-system
+  name: l2-advert
+spec:
+  ipAddressPools:
+    - lb-pool
+
